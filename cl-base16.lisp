@@ -41,22 +41,49 @@ This is set to *base-dir*/sources/ when loaded with asdf.
     ;; cl-mustache wants its input in a cons list
     ;; build a cons list from the scheme yaml file
     (let ((scheme-cons '()))
-      (progn (flet ((add-to-scheme (key value)
-		      (setf scheme-cons (append scheme-cons (list (cons
-								   (make-keyword key)
-								   value))))))
-	       (add-to-scheme :scheme-author (gethash "author" scheme-yaml))
-	       (add-to-scheme :scheme-name (gethash "scheme" scheme-yaml))
-	       (add-to-scheme :scheme-slug (slug:slugify (pathname-name scheme)))
-	       (loop for base in '("00" "01" "02" "03"
-				   "04" "05" "06" "07"
-				   "08" "09" "0A" "0B"
-				   "0C" "0D" "0E" "0F")
-		     do (add-to-scheme (concatenate 'string
-						    "base" base "-hex")
-				       (gethash (concatenate 'string "base" base)
-						scheme-yaml))))
-	     scheme-cons))
+      (flet ((add-to-scheme (key value)
+	       (setf scheme-cons (append scheme-cons (list (cons
+							    (make-keyword key)
+							    value))))))
+	(add-to-scheme :scheme-author (gethash "author" scheme-yaml))
+	(add-to-scheme :scheme-name (gethash "scheme" scheme-yaml))
+	(add-to-scheme :scheme-slug (slug:slugify (pathname-name scheme)))
+	(loop for base in '("00" "01" "02" "03"
+			    "04" "05" "06" "07"
+			    "08" "09" "0A" "0B"
+			    "0C" "0D" "0E" "0F")
+	      do (let ((hex-value (let ((temp (gethash (concatenate'string "base" base) scheme-yaml)))
+				    ;; Some scheme like dracula use #
+				    ;; At the start of their values
+				    ;; Remove this from the value
+				    (if (= (length temp) 7)
+					(subseq temp 1 7)
+					temp))))
+		   ;; Full hex string
+		   (add-to-scheme (concatenate 'string "base" base "-hex")
+				  hex-value)
+		   ;; Hex string split into rgb values
+		   (add-to-scheme (concatenate 'string "base" base "-hex-r")
+				  (subseq hex-value 0 2))
+		   (add-to-scheme (concatenate 'string "base" base "-hex-g")
+				  (subseq hex-value 2 4))
+		   (add-to-scheme (concatenate 'string "base" base "-hex-b")
+				  (subseq hex-value 4 6))
+		   ;; RGB values
+		   (add-to-scheme (concatenate 'string "base" base "-rgb-r")
+				  (parse-integer (subseq hex-value 0 2) :radix 16))
+		   (add-to-scheme (concatenate 'string "base" base "-rgb-g")
+				  (parse-integer (subseq hex-value 2 4) :radix 16))
+		   (add-to-scheme (concatenate 'string "base" base "-rgb-b")
+				  (parse-integer (subseq hex-value 4 6) :radix 16))
+		   ;; Dec Values
+		   (add-to-scheme (concatenate 'string "base" base "-dec-r")
+				  (/ (parse-integer (subseq hex-value 0 2) :radix 16) 255))
+		   (add-to-scheme (concatenate 'string "base" base "-dec-g")
+				  (/ (parse-integer (subseq hex-value 2 4) :radix 16) 255))
+		   (add-to-scheme (concatenate 'string "base" base "-dec-b")
+				  (/ (parse-integer (subseq hex-value 4 6) :radix 16) 255)))))
+      scheme-cons)
     (error "Cannot load scheme ~a" scheme)))
 
 (defun apply-scheme (scheme template mustache-filename)
