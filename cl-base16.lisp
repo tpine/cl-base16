@@ -94,23 +94,22 @@ This is set to *base-dir*/sources/ when loaded with asdf.
 	(mustache:render* template-path (load-scheme scheme))
 	(error "Cannot find template: ~a" template))))
 
-(defun save-theme (scheme template &optional (out nil))
+(defun save-theme (scheme template)
   "Save theme specified by scheme after being applied to template.
 Optionally specify:
 The output path out to use"
   (uiop:if-let ((template-yaml (open-template-or-nil template)))
     (maphash (lambda (mustache-filename template-config)
-	       (if (not out)
-		   (setf out (merge-pathnames (pathname (concatenate 'string
-								     (gethash "output" template-config) "/"
-								     (uiop:split-name-type (file-namestring scheme))
-								     (gethash "extension" template-config)))
-					      (get-template-dir template))))
-	       (uiop:ensure-all-directories-exist (list out))
-	       (with-open-file (output-file out
-					    :direction :output
-					    :if-exists :supersede
-					    :if-does-not-exist :create)
-		 (format output-file "~a" (apply-scheme scheme template mustache-filename))))
+	       (let ((template-output-path (merge-pathnames (pathname (concatenate 'string
+										   (gethash "output" template-config) "/"
+										   (uiop:split-name-type (file-namestring scheme))
+										   (gethash "extension" template-config)))
+							    (get-template-dir template))))
+		 (uiop:ensure-all-directories-exist (list template-output-path))
+		 (with-open-file (output-file template-output-path
+					      :direction :output
+					      :if-exists :supersede
+					      :if-does-not-exist :create)
+		   (format output-file "~a" (apply-scheme scheme template mustache-filename)))))
 	     template-yaml)
     (error "Could not find template: ~a" template)))
