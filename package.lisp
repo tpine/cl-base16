@@ -4,4 +4,5 @@
   (:use #:cl)
   (:export *base-dir*
 	   *source-dir*
+	   apply-scheme
 	   update))
